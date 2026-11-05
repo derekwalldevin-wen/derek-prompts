@@ -44,7 +44,17 @@ def main() -> None:
 
     img = sum(1 for e in entries if e.get("category") == "image")
     vid = sum(1 for e in entries if e.get("category") == "video")
-    check(len(entries) == 42 and img == 39 and vid == 3, f"条目数 42 / 图像 39 / 视频 3", f"got {len(entries)}/{img}/{vid}")
+    # 基线写在 data/expected.json：少于基线 = 数据丢了（FAIL）；多于基线 = 正常新增（PASS + 提示）
+    baseline_path = ROOT / "data" / "expected.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8")) if baseline_path.exists() else {"total": 42, "image": 39, "video": 3}
+    grew = len(entries) - baseline["total"]
+    check(
+        len(entries) >= baseline["total"] and img >= baseline["image"] and vid >= baseline["video"],
+        f"条目数不少于基线 {baseline['total']} / 图像 {baseline['image']} / 视频 {baseline['video']}",
+        f"got {len(entries)}/{img}/{vid}",
+    )
+    if grew > 0:
+        print(f"NOTE  比基线多 {grew} 条（新增，属正常；确认后更新 data/expected.json）")
 
     # prompt_raw 必须与交接快照逐字一致；prompt 只能是它的前缀（只截掉社媒文案，不改字）
     changed, not_prefix, residual = [], [], []
@@ -97,7 +107,7 @@ def main() -> None:
 
     print()
     if ok:
-        print(f"ALL OK — 42 条（图像 39 / 视频 3），{total} 张本地 webp；prompt_raw 与交接快照一致，prompt 仅截掉社媒文案。")
+        print(f"ALL OK — {len(entries)} 条（图像 {img} / 视频 {vid}），{total} 张本地 webp；prompt_raw 与交接快照一致，prompt 仅截掉社媒文案。")
     else:
         print("FAILED:")
         for p in problems:

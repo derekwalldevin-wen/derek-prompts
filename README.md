@@ -48,11 +48,38 @@ DESIGN-SPEC.md / GAPS.md   设计规格 / 收录缺口
 |------|------|
 | `tools/shot.mjs` | 无依赖 CDP 截图（全页／分段／移动端／暗色） |
 | `tools/e2e.mjs` | 21 项功能验收（搜索、筛选、详情、复制、外链、本地化、主题…） |
+| `tools/clean_prompts.py` | 把「🔁延伸玩法／⚙️参数技巧／📌一句话总结」及评论区引导从提示词里裁掉（原文留存在 `prompt_raw`） |
+| `tools/ingest_batch.py` | 把一批新帖 JSON 合并进库：去重、下载配图转 webp、生成 Markdown、重建、自检 |
 | `tools/apply_media.py` | 把下载清单合并回 `data/prompts.json` |
 | `tools/localize_images.py` | 备用下载管线：走图片代理抓 X CDN，断点续传，写 `site/img_local/` |
 | `tools/publish_pages.py` | 一键发布到 GitHub Pages（默认 dry-run，需 `--yes` 才真推） |
 
 需要 Node 18+ 才能跑 `shot.mjs` / `e2e.mjs`；Python 脚本需要 Pillow。
+
+## 每日同步（Grok → 本站）
+
+1. 把 [`tools/grok-daily-prompt.md`](tools/grok-daily-prompt.md) 里的提示词丢给 Grok Bot，它会输出一份 JSON 数组。
+2. 存成 `data/inbox/YYYY-MM-DD.json`。
+3. 合并并重建：
+
+   ```bash
+   python tools/ingest_batch.py data/inbox/2026-11-06.json
+   ```
+
+   脚本会按 id 去重（旧条目不会被覆盖）、把配图下载成 webp（本机被墙时自动走图片代理）、
+   为每条生成 `entries/*.md`，然后跑 `build.py` + `verify.py`。
+4. 推送上线：`git add -A && git commit -m "同步 YYYY-MM-DD 新提示词" && git push`
+   （Pages 会自动重建，约 1 分钟）。
+
+`verify.py` 用「不少于基线」判断：新增不会 FAIL，条目变少会 FAIL；基线在 `data/expected.json`。
+
+## 提示词与社媒文案的分工
+
+- `prompt`：**只放真正能粘贴进模型的提示词**。已把 35 条里的 🔁延伸玩法 / ⚙️参数技巧 /
+  📌一句话总结 / 避坑 / 评论区引导 / hashtag / 「完整提示词，直接复制：」等发帖文案裁掉。
+- `prompt_raw`：这些帖子的完整原文，逐字保留（`verify.py` 用交接快照的 sha256 校验它没被改过），
+  用于溯源，不在页面上展示。
+- 裁剪方式只做首尾截断，不重写、不重排：`verify.py` 会断言 `prompt` 是 `prompt_raw` 的连续子串。
 
 ## 媒体说明
 

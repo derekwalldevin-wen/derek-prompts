@@ -65,7 +65,18 @@ cdp.sessionId = sessionId;
 await cdp.send("Page.enable");
 await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
 await cdp.send("Page.navigate", { url: URL_ });
-await sleep(1500);
+
+// 等页面真正渲染完（线上 https 首屏可能要 2–4s），而不是死等固定毫秒
+for (let i = 0; i < 60; i++) {
+  await sleep(400);
+  try {
+    const ok = await cdp.send("Runtime.evaluate", {
+      expression: `!!(window.DEREK_PROMPTS && document.getElementById('stat-total') && document.querySelectorAll('.card').length > 0)`,
+      returnByValue: true,
+    });
+    if (ok.result.value) break;
+  } catch {}
+}
 
 async function js(expression, awaitPromise = false) {
   const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise });
