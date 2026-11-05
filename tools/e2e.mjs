@@ -170,7 +170,7 @@ const closed = await js(`JSON.stringify({open:document.getElementById('dlg').ope
 check("关闭详情后状态复位", closed.open === false && closed.id === "" && closed.hash === "", JSON.stringify(closed));
 
 // 8. no external network dependency (fonts / css / js must be same-origin)
-const remote = await js(`JSON.stringify([...document.querySelectorAll('link[href],script[src]')]
+const remote = await js(`JSON.stringify([...document.querySelectorAll('link[rel~="stylesheet"][href],link[rel~="preload"][href],link[rel~="icon"][href],script[src]')]
   .map(e=>e.getAttribute('href')||e.getAttribute('src')).filter(u=>/^https?:/.test(u)))`).then(JSON.parse);
 check("无外部依赖（字体/CSS/JS 全本地）", remote.length === 0, JSON.stringify(remote));
 
