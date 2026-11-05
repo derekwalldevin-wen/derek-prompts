@@ -1,6 +1,6 @@
 {
-  "total": 42,
-  "image": 39,
-  "video": 3,
-  "note": "交付基线（2026-11-05）。同步新增后 tools/ingest_batch.py 会自动更新这里；verify.py 用「不少于」判断，删条目会 FAIL。"
+  "total": 64,
+  "image": 54,
+  "video": 10,
+  "note": "最新基线。verify.py 用「不少于」判断：删除条目会 FAIL，新增不会。"
 }

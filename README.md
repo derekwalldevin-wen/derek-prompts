@@ -58,18 +58,27 @@ DESIGN-SPEC.md / GAPS.md   设计规格 / 收录缺口
 
 ## 每日同步（Grok → 本站）
 
-1. 把 [`tools/grok-daily-prompt.md`](tools/grok-daily-prompt.md) 里的提示词丢给 Grok Bot，它会输出一份 JSON 数组。
-2. 存成 `data/inbox/YYYY-MM-DD.json`。
-3. 合并并重建：
+**主通道（固定目录，Grok 总管每天覆盖）：**
 
-   ```bash
-   python tools/ingest_batch.py data/inbox/2026-11-06.json
-   ```
+```
+C:\Users\derek\Documents\derek-prompt-library\current\data\daily-word-and-video.json
+```
 
-   脚本会按 id 去重（旧条目不会被覆盖）、把配图下载成 webp（本机被墙时自动走图片代理）、
-   为每条生成 `entries/*.md`，然后跑 `build.py` + `verify.py`。
-4. 推送上线：`git add -A && git commit -m "同步 YYYY-MM-DD 新提示词" && git push`
-   （Pages 会自动重建，约 1 分钟）。
+```bash
+python tools/ingest_pack.py --dry-run   # 先看会新增什么、裁掉了什么、哪些被排除
+python tools/ingest_pack.py             # 下载配图 + 合并 + 生成 md + 重建 + 自检
+git add -A && git commit -m "同步 YYYY-MM-DD" && git push   # Pages 约 1 分钟自动重建
+```
+
+`ingest_pack.py` 的规则：
+- 按 `id` 去重，旧条目绝不覆盖；`type=daily_word` → 图像，`video`/`both` → 视频
+- `models` 为空的：图像补「通用图像模型」，视频补「通用视频工作流」
+- **纯工作流／实测／感想帖（没有可复制提示词）会被排除**，名单在脚本里的 `NON_PROMPT`，每次 dry-run 都会列出来
+- 提示词只保留本体：裁掉 💡核心逻辑 / ⚙️关键控制点 / 延伸玩法 / 「核心公式是…」/ 评论区引导 / hashtag
+- 配图从 `media_notes.preview_urls` 下载成 webp（本机被墙时自动走图片代理）
+
+**备用通道（手动 JSON）：** 把 [`tools/grok-daily-prompt.md`](tools/grok-daily-prompt.md) 里的提示词丢给 Grok Bot，
+把输出存成 `data/inbox/YYYY-MM-DD.json`，然后 `python tools/ingest_batch.py data/inbox/xxx.json`。
 
 `verify.py` 用「不少于基线」判断：新增不会 FAIL，条目变少会 FAIL；基线在 `data/expected.json`。
 

@@ -131,8 +131,10 @@ def report(cards: list[dict]) -> None:
     empty = [c["id"] for c in cards if not c["media"]]
     if empty:
         print("WARNING: entries without media:", ", ".join(empty))
-    if len(cards) != 42 or img != 39 or vid != 3:
-        print("WARNING: expected 42 / 39 / 3 — data changed?", file=sys.stderr)
+    baseline_path = ROOT / "data" / "expected.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8")) if baseline_path.exists() else {"total": 42}
+    if len(cards) < baseline["total"]:
+        print(f"WARNING: 条目数 {len(cards)} 少于基线 {baseline['total']} —— 数据可能丢了", file=sys.stderr)
 
 
 def main(argv: list[str]) -> None:

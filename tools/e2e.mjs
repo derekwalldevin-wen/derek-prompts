@@ -5,9 +5,12 @@
  * Exits non-zero when a check fails.
  */
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const args = process.argv.slice(2);
@@ -87,31 +90,39 @@ async function js(expression, awaitPromise = false) {
 const results = [];
 const check = (name, ok, detail = "") => { results.push({ name, ok, detail }); };
 
-// 1. dataset
+// 1. dataset（条目数会随每日同步增长，这里只校验内部一致 + 不少于基线）
+const baseline = JSON.parse(readFileSync(join(ROOT_DIR, "data", "expected.json"), "utf8"));
 const stats = await js(`JSON.stringify({total:+document.getElementById('stat-total').textContent,
   img:+document.getElementById('stat-img').textContent, vid:+document.getElementById('stat-vid').textContent,
-  cards:document.querySelectorAll('.card').length, data:window.DEREK_PROMPTS.length})`).then(JSON.parse);
-check("数据 42 条 / 图像 39 / 视频 3", stats.total === 42 && stats.img === 39 && stats.vid === 3, JSON.stringify(stats));
-check("卡片渲染数量 = 42", stats.cards === 42, "cards=" + stats.cards);
+  cards:document.querySelectorAll('.card').length, data:window.DEREK_PROMPTS.length,
+  factTotal:+document.getElementById('fact-total').textContent, factImg:+document.getElementById('fact-img').textContent})`).then(JSON.parse);
+check(`条目 ${stats.data} 条（图像 ${stats.img} / 视频 ${stats.vid}）不少于基线`,
+  stats.data >= baseline.total && stats.img + stats.vid === stats.data && stats.total === stats.data,
+  JSON.stringify(stats));
+check("卡片渲染数量 = 数据条数", stats.cards === stats.data, `cards=${stats.cards} data=${stats.data}`);
+check("首屏数字与统计卡一致", stats.factTotal === stats.data && stats.factImg === stats.img, JSON.stringify(stats));
 
 // 2. category filters
+const imgCount = stats.img;
+const vidCount = stats.vid;
 const clickCat = (label) => js(`(() => { const b=[...document.querySelectorAll('#cats button')].find(x=>x.textContent.trim().startsWith('${label}')); b&&b.click(); return document.querySelectorAll('.card').length; })()`);
-check("分类 视频 → 3 张", (await clickCat("视频")) === 3);
-check("分类 图像 → 39 张", (await clickCat("图像")) === 39);
+check(`分类 视频 → ${vidCount} 张`, (await clickCat("视频")) === vidCount);
+check(`分类 图像 → ${imgCount} 张`, (await clickCat("图像")) === imgCount);
 const cats = await js(`(() => { const bad=[...document.querySelectorAll('.card .cat')].filter(e=>e.textContent.trim()!=='图像').length; return bad; })()`);
 check("图像筛选后卡片分类全部为图像", cats === 0, "mismatch=" + cats);
 await clickCat("全部");
 
-// 3. model chips
+// 3. model chips（用 chips 上显示的计数校验筛选结果，不写死条数）
 const modelRes = await js(`(() => {
   const chips=[...document.querySelectorAll('#models .chip')];
   const target=chips.find(c=>c.dataset.v==='MiniMax');
   if(!target) return {err:'no chip'};
+  const declared=+((target.querySelector('.n')||{}).textContent||0);
   target.click();
-  return {count:document.querySelectorAll('.card').length, chips:chips.map(c=>c.dataset.v)};
+  return {count:document.querySelectorAll('.card').length, declared, chips:chips.map(c=>c.dataset.v)};
 })()`);
 check("模型 chips 含 MiniMax", Array.isArray(modelRes.chips) && modelRes.chips.includes("MiniMax"), JSON.stringify(modelRes.chips || []));
-check("MiniMax 筛选 → 3 张", modelRes.count === 3, "count=" + modelRes.count);
+check(`MiniMax 筛选结果 = chip 计数（${modelRes.declared}）`, modelRes.count === modelRes.declared, `count=${modelRes.count}`);
 await js(`[...document.querySelectorAll('#models .chip')].find(c=>c.dataset.v==='全部').click()`);
 
 // 4. model chips are not fragmented ("GPT Image" intact)

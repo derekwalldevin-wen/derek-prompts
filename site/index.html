@@ -11,12 +11,12 @@
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://derekwalldevin-wen.github.io/derek-prompts/"/>
 <meta property="og:title" content="德里克文 · 提示词库"/>
-<meta property="og:description" content="42 条原创图像／视频 AI 提示词，源自 @derek_wall90176 的 X 原创帖。"/>
+<meta property="og:description" content="@derek_wall90176 的 X 原创图像／视频 AI 提示词，全文可复制、配图本地化。"/>
 <meta property="og:image" content="https://derekwalldevin-wen.github.io/derek-prompts/og.jpg"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:site" content="@derek_wall90176"/>
 <meta name="twitter:title" content="德里克文 · 提示词库"/>
-<meta name="twitter:description" content="42 条原创图像／视频 AI 提示词，源自 @derek_wall90176 的 X 原创帖。"/>
+<meta name="twitter:description" content="@derek_wall90176 的 X 原创图像／视频 AI 提示词，全文可复制、配图本地化。"/>
 <meta name="twitter:image" content="https://derekwalldevin-wen.github.io/derek-prompts/og.jpg"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23c23b22'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' fill='%23fffdf8' font-family='Songti SC,SimSun,serif'%3E%E5%BE%B7%3C/text%3E%3C/svg%3E"/>
 <link rel="preload" href="fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin/>
@@ -215,7 +215,9 @@ h1 .latin{
   font-family:var(--font-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--mute);flex:none;padding-right:2px;
 }
-.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;min-width:0}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;min-width:0;
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);
+  mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);}
 .chips::-webkit-scrollbar{display:none}
 .chip{
   flex:none;display:inline-flex;align-items:baseline;gap:5px;
@@ -465,7 +467,7 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
         <span class="l2">提示词库<span class="seal" aria-hidden="true">德</span><span class="latin">Prompt Gallery</span></span>
       </h1>
       <div class="hero-facts">
-        <span>42 条原创</span><span>图像 39 · 视频 3</span><span>配图全部本地化</span><span>无需登录</span>
+        <span><b id="fact-total">42</b> 条原创</span><span>图像 <b id="fact-img">39</b> · 视频 <b id="fact-vid">3</b></span><span>配图全部本地化</span><span>无需登录</span>
       </div>
     </div>
     <aside class="stats" aria-label="库统计">
@@ -512,7 +514,7 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
     </div>
     <div>
       <h4>收录范围</h4>
-      <p>覆盖 2026-09-28 → 2026-11-04。无配图、无可复制正文、需 OCR 识别的帖子未收录；少数帖的配图已被 X 清理，会显示 NO PREVIEW。</p>
+      <p>覆盖 <span id="fact-range">2026-09-06 → 2026-11-05</span>。无配图、无可复制正文、需 OCR 识别的帖子未收录；少数帖的配图已被 X 清理，会显示 NO PREVIEW。</p>
     </div>
   </section>
 
@@ -577,6 +579,10 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
   $("stat-vid").textContent = catCount["视频"] || 0;
   var dr = dates();
   $("stat-range").textContent = dr[0].slice(0,7).replace("-",".") + " — " + dr[1].slice(0,7).replace("-",".");
+  $("fact-total").textContent = D.length;
+  $("fact-img").textContent = catCount["图像"] || 0;
+  $("fact-vid").textContent = catCount["视频"] || 0;
+  $("fact-range").textContent = dr[0] + " → " + dr[1];
 
   /* ── filters ──────────────────────────────────────── */
   function renderCats(){
