@@ -108,9 +108,12 @@ def sync_entries() -> None:
 DEFAULT_BASE = "https://derekwalldevin-wen.github.io/derek-prompts"
 
 
-def build_docs(target: Path | None = None, base: str | None = None) -> Path:
-    """把站点打成可部署目录。base 用于改写 canonical / og:url / og:image 的绝对地址，
-    这样同一套页面既能挂 GitHub Pages，也能挂国内托管（含自定义域名）。"""
+def build_docs(target: Path | None = None, base: str | None = None, mirror: str | None = None) -> Path:
+    """把站点打成可部署目录。
+
+    base   改写 canonical / og:url / og:image 的绝对域名（GitHub 版与国内版各一个）
+    mirror 页脚互链的对站地址：GitHub 版填国内镜像，国内版填 GitHub 版
+    """
     out = target or DOCS
     if out.exists():
         shutil.rmtree(out)
@@ -119,6 +122,14 @@ def build_docs(target: Path | None = None, base: str | None = None) -> Path:
     base = (base or DEFAULT_BASE).rstrip("/")
     if base != DEFAULT_BASE:
         html = html.replace(DEFAULT_BASE, base)
+    if mirror:
+        label = "GitHub 版" if "github.io" in mirror else "国内镜像"
+        html = html.replace(
+            "<!--MIRROR-->",
+            f'<a href="{mirror.rstrip("/")}/" target="_blank" rel="noopener">{label} ↗</a><span> · </span>',
+        )
+    else:
+        html = html.replace("<!--MIRROR-->", "")
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / "data").mkdir()
     shutil.copy2(HERE / "data" / "prompts.js", out / "data" / "prompts.js")
@@ -154,13 +165,16 @@ def main(argv: list[str]) -> None:
     sync_entries()
     target = None
     base = None
+    mirror = None
     if "--out" in argv:
         target = Path(argv[argv.index("--out") + 1]).resolve()
     if "--base" in argv:
         base = argv[argv.index("--base") + 1]
+    if "--mirror" in argv:
+        mirror = argv[argv.index("--mirror") + 1]
     out_dir = None
     if "--no-docs" not in argv:
-        out_dir = build_docs(target, base)
+        out_dir = build_docs(target, base, mirror)
     report(cards)
     print("site/data/prompts.js written" + ("" if out_dir is None else f"; 部署目录: {out_dir}"))
 
