@@ -8,3 +8,9 @@ screenshots/
 
 dist-cn/
 *.zip
+
+# Tencent Cloud EdgeOne
+.env
+.edgeone/*
+.tef_dist/*
+  
