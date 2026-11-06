@@ -1,0 +1,21 @@
+#!/bin/sh
+# 提交前自动重建两套站点产物：docs/（GitHub Pages）与 cn/（EdgeOne 国内版）。
+# 只当内容源变化时才跑，避免无意义的重建。
+# 启用：git config core.hooksPath .githooks
+
+changed=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^(data/|site/|entries/|README\.md)' || true)
+if [ -z "$changed" ]; then
+  exit 0
+fi
+
+printf '  [hook] 检测到内容变更，重建 docs/ 与 cn/ ...\n'
+if command -v python >/dev/null 2>&1; then PY=python; else PY=python3; fi
+
+cd "$(dirname "$0")/.." || exit 1
+cd site || exit 1
+"$PY" build.py --both || { printf '  [hook] 构建失败，已中止提交\n'; exit 1; }
+cd .. || exit 1
+
+git add docs cn
+printf '  [hook] docs/ 与 cn/ 已更新并加入本次提交\n'
+exit 0

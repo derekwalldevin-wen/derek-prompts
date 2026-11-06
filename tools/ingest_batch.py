@@ -192,7 +192,7 @@ def main() -> None:
 
     import subprocess
 
-    for cmd, cwd in ((["python", "build.py"], ROOT / "site"), (["python", "verify.py"], ROOT / "site")):
+    for cmd, cwd in ((["python", "build.py", "--both"], ROOT / "site"), (["python", "verify.py"], ROOT / "site")):
         r = subprocess.run(cmd, cwd=cwd)
         if r.returncode != 0:
             raise SystemExit(f"{' '.join(cmd)} 失败")

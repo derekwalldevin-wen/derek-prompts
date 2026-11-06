@@ -240,7 +240,7 @@ def main() -> None:
 
     import subprocess
 
-    for cmd in (["python", "build.py"], ["python", "verify.py"]):
+    for cmd in (["python", "build.py", "--both"], ["python", "verify.py"]):
         if subprocess.run(cmd, cwd=ROOT / "site").returncode != 0:
             raise SystemExit(f"{' '.join(cmd)} 失败")
     print("完成 → 检查通过后 git add -A && git commit && git push 即上线")

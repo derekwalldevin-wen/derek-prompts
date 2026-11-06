@@ -34,13 +34,25 @@ python verify.py            # 自检
 data/prompts.json          唯一数据源（prompt 原文，勿改写）
 data/media-manifest.json   媒体下载清单（每张图的来源、尺寸、成败）
 data/prompt-hashes.json    交接时的 prompt 哈希快照，用于校验原文未被改动
-entries/*.md               42 篇 Markdown 原文
+entries/*.md               64 篇 Markdown 原文
 site/                      站点源码（index.html / build.py / verify.py / img / fonts）
-docs/                      构建产物，可直接部署（GitHub Pages 指向这里，含 .nojekyll）
+docs/                      产物 ①：GitHub Pages 用（canonical / 分享卡指向 github.io）
+cn/                        产物 ②：EdgeOne 国内版用（canonical / 分享卡指向 edgeone 域名）
 tools/                     截图、端到端验收、媒体本地化、发布脚本
-HANDOFF-DeepSeek.md        原始交接说明（Grok）
-DESIGN-SPEC.md / GAPS.md   设计规格 / 收录缺口
+.githooks/pre-commit       提交前自动重建 docs/ + cn/（已 git config core.hooksPath .githooks）
 ```
+
+## 两套站点 & 自动更新
+
+| 产物 | 托管 | 域名 |
+|---|---|---|
+| `docs/` | GitHub Pages（main → /docs） | https://derekwalldevin-wen.github.io/derek-prompts/ |
+| `cn/` | EdgeOne Makers（导入 Git 仓库，根目录 `cn`） | https://derekwen-aigc.edgeone.dev/ |
+
+- 一次生成两套：`cd site && python build.py --both`
+- 国内域名只写在一处：`site/build.py` 里的 `CN_BASE`，换域名改它再 `--both`
+- **提交即自动重建**：装了 pre-commit hook，凡改动 `data/`、`entries/`、`site/`、`README.md`，提交时自动跑 `build.py --both` 并把 `docs/`、`cn/` 一起加入本次提交 → 推上去后 GitHub Pages 与 EdgeOne 各自重部署
+- 没有 Git 集成时的手动兜底：`python tools/deploy_cn.py --url <国内域名>` 出 zip + 二维码，拖到 EdgeOne Drop
 
 ## 工具
 

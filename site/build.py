@@ -106,6 +106,8 @@ def sync_entries() -> None:
 
 
 DEFAULT_BASE = "https://derekwalldevin-wen.github.io/derek-prompts"
+# 国内版（EdgeOne）域名；换域名时只改这一处，再跑 python build.py --both
+CN_BASE = "https://derekwen-aigc.edgeone.dev"
 
 
 def build_docs(target: Path | None = None, base: str | None = None, mirror: str | None = None) -> Path:
@@ -163,6 +165,15 @@ def main(argv: list[str]) -> None:
     cards = normalize(load())
     write_data(cards)
     sync_entries()
+
+    # --both：一次把两套产物都生成好（GitHub Pages 用 docs/，EdgeOne 用 cn/）
+    if "--both" in argv:
+        docs = build_docs(None, DEFAULT_BASE, CN_BASE)
+        cn = build_docs(ROOT / "cn", CN_BASE, DEFAULT_BASE)
+        report(cards)
+        print(f"site/data/prompts.js written; 双产物: {docs} | {cn}")
+        return
+
     target = None
     base = None
     mirror = None
