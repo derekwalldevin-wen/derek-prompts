@@ -326,7 +326,18 @@ dialog{
   width:min(1140px,100%);max-width:100%;height:min(90vh,940px);max-height:100%;
   box-shadow:var(--shadow-lg);
 }
+dialog:not([open]){display:none}
 dialog::backdrop{background:rgba(18,14,10,.66);backdrop-filter:blur(4px)}
+/* 老内核降级：没有原生 dialog 行为时，用固定浮层兜住 */
+dialog.fallback{
+  display:block;position:fixed;inset:0;z-index:100;margin:0;
+  width:100%;max-width:100%;height:100%;max-height:100%;overflow-y:auto;
+}
+dialog.fallback::before{
+  content:"";position:fixed;inset:0;z-index:-1;background:rgba(18,14,10,.66);
+}
+dialog.fallback .dlg{display:block;height:auto}
+body.dlg-open{overflow:hidden}
 @media(max-width:900px){
   dialog{width:100%;height:100%;max-height:100%;border:0}
 }
@@ -672,7 +683,7 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
     if (S.cat !== "全部") p.set("cat", S.cat);
     if (S.model !== "全部") p.set("model", S.model);
     var qs = p.toString();
-    var hash = dlg.open && dlg.dataset.id ? "#" + dlg.dataset.id : "";
+    var hash = dialogIsOpen() && dlg.dataset.id ? "#" + dlg.dataset.id : "";
     try { history.replaceState(null, "", location.pathname + (qs ? "?"+qs : "") + hash); } catch(e){}
   }
   function readURL(){
@@ -684,6 +695,23 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
 
   /* ── dialog ───────────────────────────────────────── */
   var curIdx = -1;
+
+  /* 老内核（旧版 X5 / iOS<15.4 微信）没有 dialog.showModal，降级成固定浮层，保证点得开 */
+  var nativeDialog = typeof dlg.showModal === "function";
+  function openDialog(){
+    if (nativeDialog) { if (!dlg.open) dlg.showModal(); }
+    else { dlg.setAttribute("open", ""); dlg.classList.add("fallback"); document.body.classList.add("dlg-open"); }
+  }
+  function closeDialog(){
+    if (nativeDialog) { if (dlg.open) dlg.close(); return; }
+    dlg.removeAttribute("open"); dlg.classList.remove("fallback");
+    document.body.classList.remove("dlg-open");
+    dlg.dataset.id = ""; syncURL();
+  }
+  function dialogIsOpen(){
+    return nativeDialog ? dlg.open : dlg.hasAttribute("open");
+  }
+
   function openById(id){
     var i = -1;
     for (var k=0;k<D.length;k++) if (D[k].id === id) { i = k; break; }
@@ -740,7 +768,7 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
       +   '</div>'
       + '</div>';
 
-    if (!dlg.open) dlg.showModal();
+    openDialog();
     dlg.querySelector(".panel").scrollTop = 0;
     dlg.querySelector(".media-pane").scrollTop = 0;
     syncURL();
@@ -750,13 +778,16 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
     var c = e.target.closest(".copy");
     if (c) { copyText(dlg.querySelector("pre").textContent, c); return; }
     var close = e.target.closest(".dlg-close");
-    if (close) { dlg.close(); return; }
+    if (close) { closeDialog(); return; }
     var mv = e.target.closest("[data-move]");
     if (mv) { step(+mv.dataset.move); return; }
     if (e.target.id === "copy-link") { copyText(location.href, e.target); return; }
-    if (e.target === dlg) dlg.close();
+    if (e.target === dlg) closeDialog();
   });
   dlg.addEventListener("close", function(){ dlg.dataset.id = ""; syncURL(); });
+  if (!nativeDialog) {
+    dlg.addEventListener("click", function(e){ if (e.target === dlg) closeDialog(); });
+  }
 
   function step(dir){
     if (curIdx < 0) return;
@@ -804,12 +835,13 @@ footer a:hover{color:var(--accent);border-color:var(--accent)}
 
   document.addEventListener("keydown", function(e){
     var tag = (e.target.tagName || "").toLowerCase();
-    if (e.key === "/" && !dlg.open && tag !== "input" && tag !== "textarea") { e.preventDefault(); qEl.focus(); }
-    if (e.key === "Escape" && !dlg.open && document.activeElement === qEl && qEl.value) { qEl.value = ""; S.q = ""; apply(); }
-    if (dlg.open) {
+    if (e.key === "/" && !dialogIsOpen() && tag !== "input" && tag !== "textarea") { e.preventDefault(); qEl.focus(); }
+    if (e.key === "Escape" && !dialogIsOpen() && document.activeElement === qEl && qEl.value) { qEl.value = ""; S.q = ""; apply(); }
+    if (dialogIsOpen()) {
       if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); step(1); }
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); step(-1); }
     }
+    if (e.key === "Escape" && !nativeDialog && dialogIsOpen()) closeDialog();
   });
 
   /* ── theme ────────────────────────────────────────── */

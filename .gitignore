@@ -5,3 +5,6 @@ _scratch/
 .DS_Store
 Thumbs.db
 screenshots/
+
+dist-cn/
+*.zip

@@ -105,22 +105,33 @@ def sync_entries() -> None:
             shutil.copy2(f, target)
 
 
-def build_docs() -> None:
-    if DOCS.exists():
-        shutil.rmtree(DOCS)
-    DOCS.mkdir(parents=True)
-    shutil.copy2(HERE / "index.html", DOCS / "index.html")
-    (DOCS / "data").mkdir()
-    shutil.copy2(HERE / "data" / "prompts.js", DOCS / "data" / "prompts.js")
+DEFAULT_BASE = "https://derekwalldevin-wen.github.io/derek-prompts"
+
+
+def build_docs(target: Path | None = None, base: str | None = None) -> Path:
+    """把站点打成可部署目录。base 用于改写 canonical / og:url / og:image 的绝对地址，
+    这样同一套页面既能挂 GitHub Pages，也能挂国内托管（含自定义域名）。"""
+    out = target or DOCS
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+    html = (HERE / "index.html").read_text(encoding="utf-8")
+    base = (base or DEFAULT_BASE).rstrip("/")
+    if base != DEFAULT_BASE:
+        html = html.replace(DEFAULT_BASE, base)
+    (out / "index.html").write_text(html, encoding="utf-8")
+    (out / "data").mkdir()
+    shutil.copy2(HERE / "data" / "prompts.js", out / "data" / "prompts.js")
     for folder in ("img", "fonts", "entries"):
         src = HERE / folder
         if src.is_dir():
-            shutil.copytree(src, DOCS / folder)
-    (DOCS / ".nojekyll").write_text("", encoding="utf-8")
+            shutil.copytree(src, out / folder)
+    (out / ".nojekyll").write_text("", encoding="utf-8")
     for extra in ("og.jpg", "README.md"):
         src = HERE / extra if extra == "og.jpg" else ROOT / extra
         if src.exists():
-            shutil.copy2(src, DOCS / extra)
+            shutil.copy2(src, out / extra)
+    return out
 
 
 def report(cards: list[dict]) -> None:
@@ -141,10 +152,17 @@ def main(argv: list[str]) -> None:
     cards = normalize(load())
     write_data(cards)
     sync_entries()
+    target = None
+    base = None
+    if "--out" in argv:
+        target = Path(argv[argv.index("--out") + 1]).resolve()
+    if "--base" in argv:
+        base = argv[argv.index("--base") + 1]
+    out_dir = None
     if "--no-docs" not in argv:
-        build_docs()
+        out_dir = build_docs(target, base)
     report(cards)
-    print(f"site/data/prompts.js written" + ("" if "--no-docs" in argv else f"; docs/ built at {DOCS}"))
+    print("site/data/prompts.js written" + ("" if out_dir is None else f"; 部署目录: {out_dir}"))
 
 
 if __name__ == "__main__":
